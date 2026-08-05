@@ -1,4 +1,5 @@
 import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
@@ -11,7 +12,6 @@ export default function ForgotPassword({ status }) {
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('password.email'));
     };
 
@@ -19,34 +19,32 @@ export default function ForgotPassword({ status }) {
         <GuestLayout>
             <Head title="Forgot Password" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Forgot your password? No problem. Just let us know your email
-                address and we will email you a password reset link that will
-                allow you to choose a new one.
-            </div>
+            <p className="small text-secondary">
+                Forgot your password? Enter your email address and we will send
+                you a password reset link.
+            </p>
 
             {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
-                </div>
+                <div className="alert alert-success py-2 small">{status}</div>
             )}
 
             <form onSubmit={submit}>
-                <TextInput
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={data.email}
-                    className="mt-1 block w-full"
-                    isFocused={true}
-                    onChange={(e) => setData('email', e.target.value)}
-                />
+                <div className="mb-3">
+                    <InputLabel htmlFor="email" value="Email" />
+                    <TextInput
+                        id="email"
+                        type="email"
+                        name="email"
+                        value={data.email}
+                        isFocused={true}
+                        onChange={(e) => setData('email', e.target.value)}
+                    />
+                    <InputError message={errors.email} />
+                </div>
 
-                <InputError message={errors.email} className="mt-2" />
-
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Email Password Reset Link
+                <div className="text-end">
+                    <PrimaryButton disabled={processing}>
+                        Email password reset link
                     </PrimaryButton>
                 </div>
             </form>

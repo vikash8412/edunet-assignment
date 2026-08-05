@@ -1,18 +1,14 @@
 export default function InputLabel({
     value,
+    required = false,
     className = '',
     children,
     ...props
 }) {
     return (
-        <label
-            {...props}
-            className={
-                `block text-sm font-medium text-gray-700 ` +
-                className
-            }
-        >
+        <label {...props} className={'form-label fw-semibold ' + className}>
             {value ? value : children}
+            {required && <span className="text-danger ms-1">*</span>}
         </label>
     );
 }
