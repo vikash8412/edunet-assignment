@@ -36,5 +36,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)
                 ->by($request->ip().'|'.$request->route('publicId'));
         });
+
+        // LLM calls are expensive — cap per user.
+        RateLimiter::for('ai', function (Request $request) {
+            return Limit::perMinute(6)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

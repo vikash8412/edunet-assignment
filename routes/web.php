@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiGenerationController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicFormController;
@@ -26,6 +27,11 @@ Route::middleware('auth')->group(function () {
         ->name('forms.submissions.export');
     Route::get('/submission-files/{file}', [SubmissionController::class, 'file'])
         ->name('submissions.file');
+
+    Route::post('/ai/generations', [AiGenerationController::class, 'store'])
+        ->middleware('throttle:ai')->name('ai.generations.store');
+    Route::get('/ai/generations/{generation}', [AiGenerationController::class, 'show'])
+        ->name('ai.generations.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

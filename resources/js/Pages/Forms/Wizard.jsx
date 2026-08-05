@@ -1,6 +1,7 @@
 import { useMemo, useReducer, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Stepper from '@/Components/Builder/Stepper';
+import GeneratePanel from '@/Components/Ai/GeneratePanel';
 import DetailsStep from './Steps/DetailsStep';
 import BuilderStep from './Steps/BuilderStep';
 import SettingsStep from './Steps/SettingsStep';
@@ -86,7 +87,15 @@ export default function Wizard({ mode, form, initialStep }) {
                     schema={schema}
                     dispatch={dispatch}
                     serverErrors={serverErrors}
-                    aiPanel={null}
+                    aiPanel={
+                        <GeneratePanel
+                            schema={schema}
+                            formId={form?.id ?? null}
+                            onApply={(generated) =>
+                                dispatch({ type: 'replace', schema: generated })
+                            }
+                        />
+                    }
                     onBack={() => goTo('details')}
                     onNext={() => goTo('settings')}
                     onCancel={cancel}
