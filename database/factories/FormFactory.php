@@ -1,0 +1,69 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+
+/**
+ * @extends Factory<\App\Models\Form>
+ */
+class FormFactory extends Factory
+{
+    public function definition(): array
+    {
+        $title = fake()->sentence(3);
+
+        return [
+            'user_id' => User::factory(),
+            'title' => $title,
+            'schema' => [
+                'title' => $title,
+                'description' => fake()->sentence(8),
+                'settings' => ['multi_step' => false],
+                'sections' => [
+                    [
+                        'id' => 'sec_'.Str::random(8),
+                        'title' => 'General',
+                        'description' => null,
+                        'fields' => [
+                            [
+                                'id' => 'fld_'.Str::random(8),
+                                'type' => 'text',
+                                'key' => 'full_name',
+                                'label' => 'Full name',
+                                'placeholder' => 'Jane Doe',
+                                'help' => null,
+                                'default' => null,
+                                'required' => true,
+                                'options' => [],
+                                'validation' => ['minLength' => 2, 'maxLength' => 100],
+                                'conditions' => null,
+                            ],
+                            [
+                                'id' => 'fld_'.Str::random(8),
+                                'type' => 'email',
+                                'key' => 'email',
+                                'label' => 'Email address',
+                                'placeholder' => 'jane@example.com',
+                                'help' => null,
+                                'default' => null,
+                                'required' => true,
+                                'options' => [],
+                                'validation' => null,
+                                'conditions' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'status' => 'published',
+        ];
+    }
+
+    public function draft(): static
+    {
+        return $this->state(['status' => 'draft']);
+    }
+}
