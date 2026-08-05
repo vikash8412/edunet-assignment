@@ -369,6 +369,28 @@ label {
     background: var(--surface);
     border-color: var(--border);
     box-shadow: 0 1px 2px rgba(27, 24, 54, 0.04);
+
+    // A .table-responsive wrapper breaks Bootstrap's card>table:first-child
+    // radius rule (the wrapper div is the direct child, not the table), so
+    // the table's square corners poke out past the card's rounded ones.
+    // Clip the card and round the table to match.
+    &:has(> .table-responsive:first-child) {
+        overflow: hidden;
+    }
+
+    > .table-responsive:first-child table {
+        margin-bottom: 0;
+    }
+
+    > .table-responsive:first-child thead tr:first-child {
+        th:first-child {
+            border-top-left-radius: $border-radius;
+        }
+
+        th:last-child {
+            border-top-right-radius: $border-radius;
+        }
+    }
 }
 
 .text-secondary {
