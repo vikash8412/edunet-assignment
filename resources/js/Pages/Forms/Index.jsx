@@ -21,10 +21,19 @@ export default function Index({ forms }) {
             header={
                 <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h3 className="page-title mb-0">Form Builder</h3>
-                    <Link href={route('forms.create')} className="btn btn-primary">
-                        <i className="bi bi-plus-lg me-1" />
-                        New form
-                    </Link>
+                    <div className="d-flex gap-2">
+                        <Link
+                            href={route('imports.create')}
+                            className="btn btn-outline-primary"
+                        >
+                            <i className="bi bi-file-earmark-arrow-up me-1" />
+                            Import Word/Excel
+                        </Link>
+                        <Link href={route('forms.create')} className="btn btn-primary">
+                            <i className="bi bi-plus-lg me-1" />
+                            New form
+                        </Link>
+                    </div>
                 </div>
             }
         >

@@ -12,6 +12,8 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "opis/json-schema": "^2.6",
+        "phpoffice/phpspreadsheet": "^5.9",
+        "phpoffice/phpword": "^1.4",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

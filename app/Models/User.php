@@ -56,4 +56,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(AiGeneration::class);
     }
+
+    public function imports(): HasMany
+    {
+        return $this->hasMany(Import::class);
+    }
 }

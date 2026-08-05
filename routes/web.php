@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiGenerationController;
 use App\Http\Controllers\FormController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicFormController;
 use App\Http\Controllers\SubmissionController;
@@ -32,6 +33,11 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:ai')->name('ai.generations.store');
     Route::get('/ai/generations/{generation}', [AiGenerationController::class, 'show'])
         ->name('ai.generations.show');
+
+    Route::get('/import', [ImportController::class, 'create'])->name('imports.create');
+    Route::post('/import', [ImportController::class, 'store'])->name('imports.store');
+    Route::get('/import/{import}', [ImportController::class, 'show'])->name('imports.show');
+    Route::post('/import/{import}/commit', [ImportController::class, 'commit'])->name('imports.commit');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
