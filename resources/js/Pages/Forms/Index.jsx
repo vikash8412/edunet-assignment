@@ -122,6 +122,20 @@ export default function Index({ forms }) {
                                                 >
                                                     <i className="bi bi-pencil" />
                                                 </Link>
+                                                <Link
+                                                    href={route('forms.analytics', form.id)}
+                                                    className="btn btn-outline-secondary"
+                                                    title="Analytics"
+                                                >
+                                                    <i className="bi bi-graph-up" />
+                                                </Link>
+                                                <Link
+                                                    href={route('forms.versions.index', form.id)}
+                                                    className="btn btn-outline-secondary"
+                                                    title="Version history"
+                                                >
+                                                    <i className="bi bi-clock-history" />
+                                                </Link>
                                                 <button
                                                     type="button"
                                                     className="btn btn-outline-danger"

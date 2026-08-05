@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AiGenerationController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\FormController;
+use App\Http\Controllers\FormVersionController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicFormController;
@@ -21,6 +23,14 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::resource('forms', FormController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    Route::get('/forms/{form}/versions', [FormVersionController::class, 'index'])
+        ->name('forms.versions.index');
+    Route::post('/forms/{form}/versions/{version}/rollback', [FormVersionController::class, 'rollback'])
+        ->name('forms.versions.rollback');
+
+    Route::get('/forms/{form}/analytics', [AnalyticsController::class, 'show'])
+        ->name('forms.analytics');
 
     Route::get('/forms/{form}/submissions', [SubmissionController::class, 'index'])
         ->name('forms.submissions.index');
