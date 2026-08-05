@@ -1,6 +1,10 @@
 /.phpunit.cache
 /node_modules
-/public/build
+# public/build is intentionally tracked (not ignored) — deployment to
+# shared hosting is git-pull-only, no Node available on the server, so
+# the compiled Vite output has to travel through git itself. Rebuild
+# locally (`npm run build`) and commit the changed files before every
+# deploy; see README "Deploy steps".
 /public/hot
 /public/storage
 /storage/*.key
