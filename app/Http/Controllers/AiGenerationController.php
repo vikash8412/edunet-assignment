@@ -30,7 +30,7 @@ class AiGenerationController extends Controller
             Gate::authorize('update', $form);
         }
 
-        $generation = $request->user()->aiGenerations()->create([
+        $generation = AiGeneration::createForTenant($request->user(), [
             'form_id' => $form?->id,
             'mode' => $validated['mode'],
             'prompt' => $validated['prompt'],
@@ -45,7 +45,7 @@ class AiGenerationController extends Controller
     /** Polling endpoint for the builder's AI panel. */
     public function show(Request $request, AiGeneration $generation): JsonResponse
     {
-        abort_unless($generation->user_id === $request->user()->id, 403);
+        Gate::authorize('view', $generation);
 
         return response()->json([
             'id' => $generation->id,

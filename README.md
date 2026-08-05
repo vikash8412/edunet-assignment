@@ -5,7 +5,11 @@ form building, AI generation/editing via Google Gemini, and hybrid Word/Excel
 import — all in one monolith, no separate frontend project.
 
 > **Live demo:** _not yet deployed — see "Deployment status" below._
-> **Local demo credentials** (after seeding): `demo@example.com` / `password`
+>
+> **Local demo credentials** (after seeding) — three roles, see [Roles & multi-tenancy](#roles--multi-tenancy):
+> - Platform admin: `super@example.com` / `password`
+> - Company owner: `tenant@example.com` / `password`
+> - Team member: `user@example.com` / `password`
 
 ---
 
@@ -15,6 +19,7 @@ import — all in one monolith, no separate frontend project.
 - [Quick start (local)](#quick-start-local)
 - [Environment variables](#environment-variables)
 - [Architecture](#architecture)
+- [Roles & multi-tenancy](#roles--multi-tenancy)
 - [Database schema / ERD](#database-schema--erd)
 - [API & route reference](#api--route-reference)
 - [AI prompt strategy (Part B)](#ai-prompt-strategy-part-b)
@@ -176,11 +181,62 @@ is *derived from*, not duplicated from, the same source of truth.
 
 ---
 
+## Roles & multi-tenancy
+
+Three roles live in a single `users` table — no separate `teams`/`organizations`
+table. A `role` column (`super` | `tenant` | `user`) plus a self-referencing
+`tenant_id` column carry the whole model:
+
+| Role | What they own | `tenant_id` | Landing page |
+|---|---|---|---|
+| **super** | Nothing — manages the platform | always `null` | `/companies` |
+| **tenant** | A company/workspace — the existing form-builder feature set | `null` (a tenant *is* its own tenant) | `/forms` |
+| **user** | Shares their tenant's forms — not a separate private dataset | their tenant-owner's `id` | `/forms` |
+
+`User::tenantId()` resolves "which company does this account's data belong
+to" (own id for a tenant, the `tenant_id` column for a user, `null` for a
+super) and is the single value every policy check compares against. A
+teammate has **full read/write access to their tenant's entire pool of
+forms, AI generations and imports** — not just what they personally
+created — which is the actual point of the feature: `forms`/`ai_generations`/
+`imports` each carry a denormalized `tenant_id` column (see the indexing
+rationale in the ERD section below), while `user_id` is kept as "who
+personally created this record" for authorship display only, never for
+access control.
+
+**Account creation is closed, not open** — there is no public `/register`.
+The only paths to a new account: a super is seeded once at setup; a super
+creates/edits/disables company (tenant) accounts from `/companies`; a
+tenant creates/edits/removes their own team members from `/team`.
+
+**Disabling a company suspends it, it does not delete anything.** A super
+"disabling" a company via `/companies` sets a `disabled_at` timestamp and
+leaves every form, submission and team member untouched. While disabled:
+logins for that company (the tenant and all their teammates) fail with a
+specific "account disabled" message rather than a generic invalid-credentials
+error, and the company's public fill URLs show the same "closed" screen an
+archived form shows. Restoring clears `disabled_at` and everything works
+again — no data is ever lost in either direction.
+
+**Authorization boundary**: `FormPolicy`/`AiGenerationPolicy`/`ImportPolicy`
+all compare `row.tenant_id === $user->tenantId()`; a `null` tenant id (a
+super) never matches, so "a super owns zero forms" is a hard invariant, not
+an accident of comparison semantics. Cross-tenant and cross-role failures
+return `404` consistently across the new role-gated areas (`EnsureUserHasRole`
+middleware, `TeamController`'s per-member guard) — the same "don't confirm a
+resource exists" precedent `PublicFormController` already used for draft
+previews. Policy-based `Form`/`AiGeneration`/`Import` authorization failures
+still return Laravel's natural `403`.
+
+---
+
 ## Database schema / ERD
 
 ```mermaid
 erDiagram
-    users ||--o{ forms : owns
+    users ||--o{ users : "owns team members"
+    users ||--o{ forms : "creates (author)"
+    users ||--o{ forms : "owns (tenant)"
     users ||--o{ ai_generations : requests
     users ||--o{ imports : uploads
     forms ||--o{ form_versions : has
@@ -196,10 +252,14 @@ erDiagram
         string name
         string email UK
         string password
+        string role "super|tenant|user"
+        bigint tenant_id FK "self-ref; set only for role=user"
+        timestamp disabled_at "suspends a tenant's whole company"
     }
     forms {
         bigint id PK
-        bigint user_id FK
+        bigint user_id FK "author — who created it"
+        bigint tenant_id FK "owner — the company; drives all access control"
         ulid public_id UK "public fill URL"
         string title
         json schema "working copy"
@@ -240,7 +300,8 @@ erDiagram
     }
     ai_generations {
         bigint id PK
-        bigint user_id FK
+        bigint user_id FK "author"
+        bigint tenant_id FK "owner — the company"
         bigint form_id FK "null = create mode"
         string mode "create|edit"
         text prompt
@@ -254,7 +315,8 @@ erDiagram
     }
     imports {
         bigint id PK
-        bigint user_id FK
+        bigint user_id FK "author"
+        bigint tenant_id FK "owner — the company"
         bigint form_id FK "set once committed"
         string kind "docx|xlsx"
         string status "queued|parsing|ready|committed|failed"
@@ -267,15 +329,16 @@ erDiagram
 
 | Table | Index | Reason |
 |---|---|---|
+| `users` | `role`, `(tenant_id, role)` | Companies list (`role=tenant`) and a tenant's team-member list both filter on these without a scan. |
 | `forms` | unique `public_id` | O(1) lookup for the public fill URL — the hottest unauthenticated read path. |
-| `forms` | `(user_id, status)` | Owner's dashboard filters by status without a table scan. |
+| `forms` | `(tenant_id, status)` | The workspace dashboard filters by status without a table scan — was `(user_id, status)` before multi-tenancy; every teammate now sees the same list, so the index leads with the company, not the individual creator. |
 | `form_versions` | unique `(form_id, version)` | Enforces one immutable snapshot per version number; also the natural lookup for rollback/diff. |
 | `submissions` | `(form_id, id)`, `(form_id, created_at)` | Paginated listing, newest first, without sorting the whole table. |
 | `submissions` | FULLTEXT `search_text` (MySQL/MariaDB only; LIKE fallback elsewhere) | Answer search across free-text fields without a separate search service. |
 | `submissions` | `(form_id, ip_hash, created_at)` | Per-IP spam/rate-limit checks stay indexed. |
 | `form_events` | `(form_id, type, created_at)` | Funnel aggregation (`COUNT(DISTINCT session_hash) GROUP BY type`) for the analytics dashboard. |
 | `form_events` | `(form_id, session_hash, type)` | De-duplicates view/start beacons per session cheaply. |
-| `ai_generations` / `imports` | `(user_id, status, id)` | The UI polls "my latest generation/import status" — indexed, not scanned. |
+| `ai_generations` / `imports` | `(tenant_id, status, id)` | The UI polls "our latest generation/import status" — indexed, not scanned. Denormalized onto each table rather than resolved via a join through `users`, so this exact index shape survives multi-tenancy unchanged; see [Roles & multi-tenancy](#roles--multi-tenancy). |
 
 ---
 
@@ -283,11 +346,21 @@ erDiagram
 
 All routes are session-authenticated (Breeze) except the `/f/{publicId}`
 group. Inertia page routes return full pages; the rest return JSON for
-client-side polling.
+client-side polling. Routes marked **super** or **tenant** are additionally
+gated by the `role:` middleware — see [Roles & multi-tenancy](#roles--multi-tenancy).
 
 | Method | Route | Purpose |
 |---|---|---|
-| `GET` | `/forms` | Paginated list of the current user's forms |
+| `GET` | `/companies` **(super)** | List companies (tenant accounts) |
+| `POST` | `/companies` **(super)** | Create a company |
+| `PUT` | `/companies/{tenant}` **(super)** | Edit a company's name/email/password |
+| `DELETE` | `/companies/{tenant}` **(super)** | Disable a company — suspends, never deletes data |
+| `POST` | `/companies/{tenant}/restore` **(super)** | Re-enable a disabled company |
+| `GET` | `/team` **(tenant)** | List this company's team members |
+| `POST` | `/team` **(tenant)** | Add a team member |
+| `PUT` | `/team/{member}` **(tenant)** | Edit a team member |
+| `DELETE` | `/team/{member}` **(tenant)** | Remove a team member |
+| `GET` | `/forms` | Paginated list of the current tenant's forms (shared across teammates) |
 | `GET` | `/forms/create` , `/forms/{form}/edit` | 4-step builder wizard (create / edit) |
 | `POST` | `/forms` , `PUT /forms/{form}` | Validate schema → save → append version |
 | `DELETE` | `/forms/{form}` | Soft delete |
@@ -453,10 +526,13 @@ analytics aggregation queries (feature).
 - **No live deployment yet** — see [Deployment status](#deployment-status).
   Everything is verified locally (automated tests + a full browser
   smoke-test of every screen) but not yet reachable from the internet.
-- **Multi-tenant scoping is per-user, not per-organization.** Forms belong
-  to a `user_id`; there's no team/org layer. Adding one is additive
-  (a `teams` table + a `team_id` column + updated policies) — see
-  DECISIONS.md for the reasoning.
+- **Company disable is manual, no billing/plan tied to it.** A super can
+  suspend a company from `/companies`, but there's no automated trigger
+  (unpaid invoice, trial expiry) — that layer doesn't exist yet.
+- **No self-service signup.** Every account is provisioned by a super
+  (companies) or a tenant (team members) — there's no public `/register`
+  by design, so onboarding a brand-new company always requires a super
+  admin action first.
 - **CSV export streams synchronously** rather than as a queued job; fine
   at the data volumes a grading pass will generate, but a form with
   hundreds of thousands of submissions would want a queued export with a

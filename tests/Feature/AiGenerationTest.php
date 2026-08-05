@@ -58,7 +58,7 @@ function runGeneration(string $mode = 'create', ?Form $form = null): AiGeneratio
 {
     $user = $form?->user ?? User::factory()->create();
 
-    $generation = $user->aiGenerations()->create([
+    $generation = AiGeneration::createForTenant($user, [
         'form_id' => $form?->id,
         'mode' => $mode,
         'prompt' => 'internship application with education history',
@@ -195,7 +195,7 @@ it('rejects edit requests for forms the user does not own', function () {
 });
 
 it('hides generation status from other users', function () {
-    $generation = User::factory()->create()->aiGenerations()->create([
+    $generation = AiGeneration::createForTenant(User::factory()->create(), [
         'mode' => 'create',
         'prompt' => 'anything at all',
         'status' => AiGeneration::STATUS_QUEUED,

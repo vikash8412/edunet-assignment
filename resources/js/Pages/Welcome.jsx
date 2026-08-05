@@ -15,18 +15,16 @@ export default function Welcome({ auth }) {
                 </p>
                 <div className="d-flex gap-2">
                     {auth.user ? (
-                        <Link href={route('forms.index')} className="btn btn-primary">
-                            Go to my forms
+                        <Link
+                            href={route(auth.user.role === 'super' ? 'companies.index' : 'forms.index')}
+                            className="btn btn-primary"
+                        >
+                            {auth.user.role === 'super' ? 'Go to companies' : 'Go to my forms'}
                         </Link>
                     ) : (
-                        <>
-                            <Link href={route('login')} className="btn btn-primary">
-                                Log in
-                            </Link>
-                            <Link href={route('register')} className="btn btn-outline-primary">
-                                Register
-                            </Link>
-                        </>
+                        <Link href={route('login')} className="btn btn-primary">
+                            Log in
+                        </Link>
                     )}
                 </div>
             </div>

@@ -19,7 +19,7 @@ class FormController extends Controller
 
     public function index(Request $request): Response
     {
-        $forms = $request->user()->forms()
+        $forms = Form::forTenant($request->user()->tenantId())
             ->withCount('submissions')
             ->latest('updated_at')
             ->paginate(10)
@@ -50,14 +50,13 @@ class FormController extends Controller
     {
         $schema = $this->validatedSchema($request);
 
-        $form = $request->user()->forms()->make([
+        $form = Form::createForTenant($request->user(), [
             'title' => $schema['title'],
+            'schema' => $schema,
             'status' => $request->input('status') === 'published'
                 ? Form::STATUS_PUBLISHED
                 : Form::STATUS_DRAFT,
         ]);
-        $form->schema = $schema;
-        $form->save();
 
         $form->saveSchemaVersion($schema, $request->user()->id);
 

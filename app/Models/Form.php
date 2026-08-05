@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 
 class Form extends Model
 {
+    use BelongsToTenant;
     use HasFactory;
     use SoftDeletes;
 
@@ -34,6 +36,7 @@ class Form extends Model
         });
     }
 
+    /** Who personally created this form — an author field, not an access-control one (see tenant_id). */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -67,6 +70,22 @@ class Form extends Model
     public function publicUrl(): string
     {
         return route('fill.show', $this->public_id);
+    }
+
+    /**
+     * Create a form attributed to $user, scoped to their tenant. The single
+     * place tenant_id is ever assigned — never trust it from client input.
+     */
+    public static function createForTenant(User $user, array $attributes): self
+    {
+        // user_id/tenant_id aren't in $fillable (mass-assignment must never
+        // accept a tenant from client input) — set them directly instead.
+        $form = new self($attributes);
+        $form->user_id = $user->id;
+        $form->tenant_id = $user->tenantId();
+        $form->save();
+
+        return $form;
     }
 
     /**

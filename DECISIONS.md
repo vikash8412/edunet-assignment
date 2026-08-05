@@ -5,14 +5,60 @@ picks, trade-offs accepted, and what two more weeks would go toward.
 
 ## Assumptions
 
-1. **Single-user-scoped forms, not full multi-tenancy.** The brief lists
+1. **Multi-tenant via a `role` + self-referencing `tenant_id` column on
+   `users`, not a separate `teams`/`organizations` table.** The brief lists
    multi-tenant isolation only as a Part D *bonus*, not a mandatory
-   requirement, so `forms.user_id` + a Laravel policy is the scoping
-   mechanism rather than a full `teams`/`organizations` layer. Every
-   authorization check (`FormPolicy`, the AI/import/version/analytics
-   controllers) already goes through Laravel's `Gate`, so adding a `team_id`
-   column and updating the policy to check team membership instead of raw
-   ownership is additive, not a rewrite.
+   requirement, but it was requested directly and built for real. Three
+   roles share one table: `super` (platform admin, owns nothing, manages the
+   list of companies), `tenant` (a company/workspace owner — the existing
+   form-builder feature set), and `user` (a team member whose `tenant_id`
+   points at their tenant-owner's `id` and who shares **full read/write
+   access to that tenant's entire pool of forms/data**, not just what they
+   personally created — that sharing is the actual point of the feature).
+   `User::tenantId()` resolves which company a given account's data belongs
+   to (own id for a tenant, the `tenant_id` column for a user, `null` for a
+   super) and is the one value every policy compares against.
+
+   `forms`, `ai_generations` and `imports` each got their own **denormalized**
+   `tenant_id` column rather than resolving ownership via a join through
+   `users` at query time. Every existing hot-path index on these tables
+   already led with the ownership column (`[user_id, status]`,
+   `[user_id, status, id]`); swapping in `tenant_id` in the same shape kept
+   every dashboard listing and AI/import status poll index-backed with zero
+   query-plan regression — a join would have defeated those indexes on
+   every poll, and `ai_generations`/`imports` are polled frequently from the
+   frontend. `user_id` was kept on all three tables, its meaning narrowed to
+   "who personally created this record" — an audit/author field, exactly
+   the role `form_versions.created_by` already played before this change.
+   The trade-off accepted: `tenant_id` must never be set from client input:
+   every write path goes through one model-level `Form::createForTenant()`
+   (mirrored on the other two models), so there's exactly one place per
+   model where it's ever assigned — a mass-assignment bug here (fixed
+   during implementation: `user_id`/`tenant_id` aren't in `$fillable`, so
+   `new Form(array_merge(...))` was silently dropping them) is exactly the
+   kind of drift this single-entry-point design is meant to prevent.
+
+   Public self-registration was removed entirely — the only paths to a new
+   account are a seeded super, a super creating companies from `/companies`,
+   or a tenant creating team members from `/team`. A super "deleting" a
+   company from that screen **suspends** it (`disabled_at` timestamp) rather
+   than destroying anything: forms, submissions and team members are all
+   preserved, logins for that company are blocked with a specific message,
+   and its public fill URLs show the same "closed" screen an archived form
+   shows. This was a deliberate choice over a hard delete + cascade, since a
+   platform admin's "remove this company" action being irreversible and
+   silently destroying a paying customer's data felt like the wrong default
+   — restore is one click, data loss should never be.
+
+   For the same reason, the self-service "delete my account" feature that
+   shipped with the original Breeze scaffold was removed rather than adapted:
+   in a multi-tenant model a tenant deleting themselves would orphan their
+   team and cascade-delete the whole company's forms as an irreversible
+   side effect of what a user might treat as a routine settings action —
+   removed instead of building a multi-tenant-safe version of it, since
+   the Companies "disable" flow already covers the legitimate underlying
+   need (an admin removing a company) without the accidental-self-destruct
+   risk.
 
 2. **React via Inertia.js, inside the Laravel app, no separate frontend
    project.** The brief allows "Livewire and/or React"; the user explicitly
@@ -192,8 +238,10 @@ HyperLogLog instead of daily session hashing.
 
 - **Live deployment** to the shared-hosting target, plus a recorded 3–5
   minute walkthrough — both flagged as outstanding in the README.
-- **Multi-tenant orgs**, building on the ownership-policy pattern already
-  in place (see Assumption 1).
+- **Billing/plans tied to company suspension** — disabling a company is
+  currently a manual super-admin action with no automated trigger (unpaid
+  invoice, trial expiry). Building on the multi-tenant model in Assumption 1
+  rather than replacing it.
 - **Webhooks + a public submissions API** (listed as a Part D example this
   submission didn't pick) — signed payloads on submission, a
   token-authenticated read API, so the form builder can sit behind other

@@ -50,6 +50,14 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (Auth::user()->isDisabled()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'Your company account has been disabled. Contact your administrator.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

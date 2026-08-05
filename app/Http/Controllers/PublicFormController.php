@@ -29,7 +29,7 @@ class PublicFormController extends Controller
     {
         $form = $this->resolveForm($request, $publicId);
 
-        if ($form->status === Form::STATUS_ARCHIVED) {
+        if ($form->status === Form::STATUS_ARCHIVED || $form->tenant->isDisabled()) {
             return Inertia::render('Public/Closed', [
                 'title' => $form->title,
             ]);
@@ -52,6 +52,7 @@ class PublicFormController extends Controller
         $form = $this->resolveForm($request, $publicId);
 
         abort_unless($form->isPublished(), 403, 'This form is not accepting responses.');
+        abort_if($form->tenant->isDisabled(), 403, 'This form is not accepting responses.');
 
         // Honeypot: bots fill every input. Pretend success, store nothing.
         if ($request->filled('_hp_website')) {
@@ -125,8 +126,11 @@ class PublicFormController extends Controller
     {
         $form = Form::where('public_id', $publicId)->firstOrFail();
 
-        // Drafts are visible to their owner as a preview, 404 for everyone else.
-        if ($form->status === Form::STATUS_DRAFT && $request->user()?->id !== $form->user_id) {
+        // Drafts are visible to any teammate in the owning tenant as a
+        // preview, 404 for everyone else.
+        $viewerTenantId = $request->user()?->tenantId();
+
+        if ($form->status === Form::STATUS_DRAFT && $viewerTenantId !== $form->tenant_id) {
             abort(404);
         }
 

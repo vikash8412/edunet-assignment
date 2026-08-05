@@ -45,7 +45,7 @@ it('parses an uploaded docx end-to-end through the job', function () {
     config(['services.gemini.key' => null]); // deterministic only
     $user = User::factory()->create();
 
-    $import = $user->imports()->create([
+    $import = Import::createForTenant($user, [
         'original_name' => 'job-application.docx',
         'path' => 'imports/job-application.docx',
         'kind' => 'docx',
@@ -75,7 +75,7 @@ it('parses an uploaded docx end-to-end through the job', function () {
 it('commits a ready import as a draft form with version source=import', function () {
     $user = User::factory()->create();
 
-    $import = $user->imports()->create([
+    $import = Import::createForTenant($user, [
         'original_name' => 'x.docx',
         'path' => 'imports/x.docx',
         'kind' => 'docx',
@@ -101,7 +101,7 @@ it('commits a ready import as a draft form with version source=import', function
 
 it('refuses to commit someone else\'s import or a broken schema', function () {
     $owner = User::factory()->create();
-    $import = $owner->imports()->create([
+    $import = Import::createForTenant($owner, [
         'original_name' => 'x.docx',
         'path' => 'imports/x.docx',
         'kind' => 'docx',

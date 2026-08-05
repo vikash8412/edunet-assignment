@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Form;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -69,11 +70,23 @@ class FormFactory extends Factory
 
     public function configure(): static
     {
-        // Mirror the real save flow: every form starts at version 1.
-        return $this->afterCreating(function ($form) {
-            if ($form->versions()->count() === 0) {
-                $form->saveSchemaVersion($form->schema, $form->user_id);
-            }
-        });
+        return $this
+            // tenant_id must be derived from whichever user_id actually
+            // resolves — explicit, ->for($user), or the bare factory default
+            // — so every existing call site keeps working without having to
+            // pass tenant_id itself.
+            ->afterMaking(function (Form $form) {
+                if (! $form->tenant_id) {
+                    $owner = User::find($form->user_id) ?? User::factory()->tenant()->create();
+                    $form->tenant_id = $owner->tenantId();
+                    $form->user_id = $owner->id;
+                }
+            })
+            // Mirror the real save flow: every form starts at version 1.
+            ->afterCreating(function (Form $form) {
+                if ($form->versions()->count() === 0) {
+                    $form->saveSchemaVersion($form->schema, $form->user_id);
+                }
+            });
     }
 }

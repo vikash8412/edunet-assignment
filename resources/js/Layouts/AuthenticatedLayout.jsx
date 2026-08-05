@@ -19,9 +19,17 @@ export default function AuthenticatedLayout({ header, children }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [userOpen, setUserOpen] = useState(false);
 
-    const links = [
-        { href: route('forms.index'), label: 'Forms', active: route().current('forms.*') || route().current('builder.*') },
-    ];
+    const homeRoute = user.role === 'super' ? 'companies.index' : 'forms.index';
+
+    const links =
+        user.role === 'super'
+            ? [{ href: route('companies.index'), label: 'Companies', active: route().current('companies.*') }]
+            : user.role === 'tenant'
+              ? [
+                    { href: route('forms.index'), label: 'Forms', active: route().current('forms.*') },
+                    { href: route('team.index'), label: 'Team', active: route().current('team.*') },
+                ]
+              : [{ href: route('forms.index'), label: 'Forms', active: route().current('forms.*') }];
 
     return (
         <div className="min-vh-100 d-flex flex-column">
@@ -34,7 +42,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     >
                         <i className="bi bi-list fs-4" />
                     </button>
-                    <Link href={route('forms.index')} className="text-decoration-none">
+                    <Link href={route(homeRoute)} className="text-decoration-none">
                         <ApplicationLogo />
                     </Link>
                     <div className="d-none d-md-flex ms-4">

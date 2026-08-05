@@ -81,14 +81,6 @@ export default function Login({ status, canResetPassword }) {
                     )}
                     <PrimaryButton disabled={processing}>Log in</PrimaryButton>
                 </div>
-
-                <hr />
-                <div className="small text-center text-secondary">
-                    No account?{' '}
-                    <Link href={route('register')} className="text-decoration-none">
-                        Register
-                    </Link>
-                </div>
             </form>
         </GuestLayout>
     );

@@ -9,6 +9,7 @@ use App\Services\Schema\SchemaValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,7 +30,7 @@ class ImportController extends Controller
         $file = $request->file('file');
         $kind = strtolower($file->getClientOriginalExtension());
 
-        $import = $request->user()->imports()->create([
+        $import = Import::createForTenant($request->user(), [
             'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
             'path' => $file->store('imports'),
             'kind' => $kind,
@@ -44,7 +45,7 @@ class ImportController extends Controller
     /** Polling endpoint for the import wizard. */
     public function show(Request $request, Import $import): JsonResponse
     {
-        abort_unless($import->user_id === $request->user()->id, 403);
+        Gate::authorize('view', $import);
 
         return response()->json([
             'id' => $import->id,
@@ -64,7 +65,7 @@ class ImportController extends Controller
      */
     public function commit(Request $request, Import $import, SchemaValidator $validator): RedirectResponse
     {
-        abort_unless($import->user_id === $request->user()->id, 403);
+        Gate::authorize('commit', $import);
         abort_unless($import->status === Import::STATUS_READY, 409, 'This import is not ready to commit.');
 
         $schema = $request->input('schema');
@@ -81,12 +82,11 @@ class ImportController extends Controller
             ]);
         }
 
-        $form = $request->user()->forms()->make([
+        $form = Form::createForTenant($request->user(), [
             'title' => $schema['title'],
+            'schema' => $schema,
             'status' => Form::STATUS_DRAFT,
         ]);
-        $form->schema = $schema;
-        $form->save();
         $form->saveSchemaVersion($schema, $request->user()->id, source: 'import');
 
         $import->update(['status' => Import::STATUS_COMMITTED, 'form_id' => $form->id]);

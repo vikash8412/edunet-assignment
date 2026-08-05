@@ -12,9 +12,21 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $demo = User::factory()->create([
+        User::factory()->super()->create([
+            'name' => 'Super Admin',
+            'email' => 'super@example.com',
+            'password' => 'password',
+        ]);
+
+        $demo = User::factory()->tenant()->create([
+            'name' => 'Demo Tenant',
+            'email' => 'tenant@example.com',
+            'password' => 'password',
+        ]);
+
+        User::factory()->teamMemberOf($demo)->create([
             'name' => 'Demo User',
-            'email' => 'demo@example.com',
+            'email' => 'user@example.com',
             'password' => 'password',
         ]);
 
@@ -71,9 +83,11 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        $form = $user->forms()->make(['title' => $schema['title'], 'status' => Form::STATUS_PUBLISHED]);
-        $form->schema = $schema;
-        $form->save();
+        $form = Form::createForTenant($user, [
+            'title' => $schema['title'],
+            'schema' => $schema,
+            'status' => Form::STATUS_PUBLISHED,
+        ]);
         $form->saveSchemaVersion($schema, $user->id);
 
         return $form;
@@ -155,9 +169,11 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        $form = $user->forms()->make(['title' => $schema['title'], 'status' => Form::STATUS_PUBLISHED]);
-        $form->schema = $schema;
-        $form->save();
+        $form = Form::createForTenant($user, [
+            'title' => $schema['title'],
+            'schema' => $schema,
+            'status' => Form::STATUS_PUBLISHED,
+        ]);
         $form->saveSchemaVersion($schema, $user->id);
 
         return $form;
