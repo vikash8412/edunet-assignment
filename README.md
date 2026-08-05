@@ -4,7 +4,7 @@ Laravel 11 + React (Inertia.js) + Bootstrap 5 + MySQL 8. Manual drag-and-drop
 form building, AI generation/editing via Google Gemini, and hybrid Word/Excel
 import — all in one monolith, no separate frontend project.
 
-> **Live demo:** _not yet deployed — see "Deployment status" below._
+> **Live demo:** [assignment.nammataxi.in](https://assignment.nammataxi.in) — shared hosting (cPanel/LiteSpeed), git-pull deploy, cron-driven queue worker.
 >
 > **Local demo credentials** (after seeding) — three roles, see [Roles & multi-tenancy](#roles--multi-tenancy):
 > - Platform admin: `super@example.com` / `password`
@@ -32,23 +32,25 @@ import — all in one monolith, no separate frontend project.
 
 ## Deployment status
 
-The brief targets shared hosting (domianz.in). Honest status: **the app is
-built, tested (126 automated tests, all passing) and smoke-tested end-to-end
-in a real browser, but has not yet been pushed to the shared-hosting
-account** — that's an infrastructure step outside this repo (SSH/FTP access,
-DNS, cron panel) that needs doing from the hosting control panel directly.
+**Live** at [assignment.nammataxi.in](https://assignment.nammataxi.in) on
+shared hosting (cPanel/LiteSpeed), 151 automated tests passing locally,
+smoke-tested end-to-end in a real browser on both local and the live site.
 
-What's ready to go the moment hosting access is available:
+What made this work on shared hosting (no Node.js, no SSH-based build step,
+no Supervisor/Redis):
 
-- `.env.example` is complete and shared-hosting-aware (MySQL, database queue
-  driver, no Redis/Horizon dependency).
+- `.env.example` is shared-hosting-aware (MySQL, database queue driver, no
+  Redis/Horizon dependency).
+- `public/build/` is committed straight to git (see the `.gitignore`
+  comment on that line) since the server can't run `npm run build` itself —
+  deploy is `git pull` only.
+- Two cron jobs drive everything queue-related — see step 7 below.
 - `database/sql/formbuilder.sql` is a full structure + seed-data dump —
   import it directly instead of running seeders on the host if `artisan` is
   restricted.
-- Deploy steps below are written for exactly this host type.
 
 **If PHP < 8.2, cron is unavailable, or `exec`/`proc_open` are disabled** on
-the target shared host, the documented fallback is Railway or Render (free
+a target shared host, the documented fallback is Railway or Render (free
 tier) — the codebase is host-agnostic; only the queue-worker mechanism
 (cron vs. a long-running worker/Horizon) changes.
 
@@ -88,13 +90,19 @@ git push
    is available.
 6. `php artisan storage:link` (or a small PHP script creating the symlink,
    if the artisan command is blocked by the host).
-7. **Queue worker without Supervisor**: add a cron job, once a minute:
+7. **Queue worker without Supervisor**: add two cron jobs (cPanel → Cron
+   Jobs → Common Settings → "Once Per Minute"), both `* * * * *`:
    ```
-   * * * * * cd /path/to/app && php artisan queue:work database --stop-when-empty --max-time=50 >> /dev/null 2>&1
+   cd /path/to/app && /usr/local/bin/php artisan queue:work database --stop-when-empty --max-time=50 >> /dev/null 2>&1
+   cd /path/to/app && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1
    ```
-   Add a second cron for `php artisan schedule:run` (same cadence) to prune
-   old failed jobs. This is *why* the queue driver is `database` and not
-   Redis/Horizon — shared hosting has no persistent worker process.
+   Use the full path to the `php` binary (`which php` over SSH) — cron's
+   `PATH` is not the same as an interactive shell's, so a bare `php` can
+   silently fail to run. Without the first cron, AI generation and import
+   jobs sit in the `jobs` table forever (`reserved_at` stays `NULL`) —
+   check that table directly if generation/import ever seems stuck. This
+   is *why* the queue driver is `database` and not Redis/Horizon — shared
+   hosting has no persistent worker process.
 8. Smoke-test: log in with the seeded demo account, create a form, generate
    one with AI, fill it publicly, check submissions/analytics.
 
@@ -151,7 +159,7 @@ Run the test suite (uses an in-memory SQLite connection, see `phpunit.xml`):
 | `DB_*` | MySQL connection. Tests override to SQLite `:memory:` via `phpunit.xml`. |
 | `QUEUE_CONNECTION` | `database` — chosen for shared-hosting compatibility (no Redis/Supervisor needed); cron drives it in prod. |
 | `GEMINI_API_KEY` | Google Gemini key (free tier at [aistudio.google.com](https://aistudio.google.com/apikey)). Blank = AI generation fails with a clear message; import degrades ambiguous fields to `text` silently. |
-| `GEMINI_MODEL` | Defaults to `gemini-2.0-flash`. |
+| `GEMINI_MODEL` | Defaults to `gemini-flash-latest`. `gemini-2.0-flash` had zero free-tier quota on the API key used during development — verify quota on your own key before switching. |
 | `GEMINI_TIMEOUT` | HTTP timeout (seconds) for a single Gemini call. |
 
 Never commit a real `.env` — only `.env.example` is tracked.
@@ -525,7 +533,7 @@ Three picked; each has a full write-up in [DECISIONS.md](DECISIONS.md):
 ## Testing
 
 ```bash
-./vendor/bin/pest                 # 126 tests, ~470 assertions, in-memory SQLite
+./vendor/bin/pest                 # 151 tests, ~596 assertions, in-memory SQLite
 ./vendor/bin/pest --coverage      # requires Xdebug/PCOV
 ```
 
@@ -542,9 +550,26 @@ analytics aggregation queries (feature).
 
 ## Known limitations
 
-- **No live deployment yet** — see [Deployment status](#deployment-status).
-  Everything is verified locally (automated tests + a full browser
-  smoke-test of every screen) but not yet reachable from the internet.
+- **No Redis/Horizon** — a deliberate choice, not an oversight. Both are
+  listed in the brief as "positive signals" (bonus, not required) alongside
+  a separate Python FastAPI AI service and Docker; three differentiators
+  were already picked for Part D (see
+  [Part D — differentiators](#part-d--differentiators)), and Redis/Horizon
+  specifically need a persistent background process with root/daemon
+  access, which the target shared-hosting environment (cPanel, no root)
+  does not offer. The queue driver is `database`, driven by a cron job
+  (see [Deployment status](#deployment-status)) — this is what actually
+  runs reliably on that host, at the cost of a worst-case ~1 minute delay
+  before an AI generation or import starts processing (the cron only runs
+  once a minute), versus a Redis-backed worker picking jobs up
+  immediately. Swapping to Redis/Horizon later needs no code change, only
+  `QUEUE_CONNECTION=redis` + a host that can run a persistent worker.
+- **Seeding on the live server needs `composer install` without
+  `--no-dev`.** `fakerphp/faker` is in `require-dev`; if the host was
+  provisioned with `--no-dev`, `php artisan db:seed` fails with `Class
+  "Faker\Factory" not found`. Either re-run `composer install` (no flag)
+  before seeding, or import `database/sql/formbuilder.sql` directly
+  instead, which needs no seeder at all.
 - **Company disable is manual, no billing/plan tied to it.** A super can
   suspend a company from `/companies`, but there's no automated trigger
   (unpaid invoice, trial expiry) — that layer doesn't exist yet.
