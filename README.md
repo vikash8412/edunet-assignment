@@ -54,18 +54,33 @@ tier) — the codebase is host-agnostic; only the queue-worker mechanism
 
 ### Deploy steps (shared hosting)
 
+**Deploy is git-pull-only** — the server has no Node.js, so the compiled
+frontend can't be built there. `public/build/` is therefore committed to
+git (see `.gitignore`'s comment on that line) rather than the more common
+"gitignore it and build in CI" setup. **Every time frontend code changes,
+rebuild locally and commit the result before pushing:**
+```bash
+npm run build
+git add public/build && git commit -m "chore: rebuild assets"
+git push
+```
+`vendor/` stays out of git — the server runs `composer install` itself.
+
 1. **Pre-flight** (check in the hosting control panel first): PHP ≥ 8.2 CLI,
    Composer availability, MySQL 8/MariaDB with JSON column support, cron job
    access, `exec`/`proc_open` enabled. If any of these are missing, use the
    Railway/Render fallback instead.
 2. Point the domain/subdomain **document root at `public/`** (or add a root
    `.htaccess` rewrite if the panel doesn't support a custom docroot).
-3. Upload the repo (git pull over SSH, or a zip via FTP) **including a
-   locally-built `public/build/`** — most shared hosts have no Node.
+3. On the server, over SSH:
    ```bash
-   npm ci && npm run build   # run locally, then upload public/build/
+   git clone <repo-url> .          # first time
+   git pull                        # subsequent deploys
    composer install --no-dev --optimize-autoloader
    ```
+   `public/build/` arrives with the `git pull` itself — no separate upload
+   step needed, as long as it was rebuilt and committed locally first (see
+   above).
 4. Copy `.env.example` → `.env`, fill in `DB_*`, `APP_KEY` (`php artisan
    key:generate`), `APP_URL`, and `GEMINI_API_KEY`.
 5. Import `database/sql/formbuilder.sql` via phpMyAdmin/CLI, **or** run
@@ -82,6 +97,10 @@ tier) — the codebase is host-agnostic; only the queue-worker mechanism
    Redis/Horizon — shared hosting has no persistent worker process.
 8. Smoke-test: log in with the seeded demo account, create a form, generate
    one with AI, fill it publicly, check submissions/analytics.
+
+**Subsequent deploys** are just: rebuild + commit assets locally → push →
+`git pull` on the server → `composer install` if `composer.lock` changed →
+`php artisan migrate --force` if new migrations landed.
 
 ---
 
