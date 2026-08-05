@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import {
@@ -11,36 +12,44 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
-const BRAND = '#2f80ed';
-const INK_MUTED = '#8a93a3';
-const GRID = 'rgba(30, 42, 86, 0.08)';
+/**
+ * Chart.js paints to a <canvas> — it can't read CSS custom properties the
+ * way the rest of the UI does, so we resolve the active theme's tokens once
+ * per render and pass them in as plain values. Re-resolves whenever the
+ * user's OS theme or the in-app toggle changes.
+ */
+function useChartTokens() {
+    const resolve = () => {
+        const styles = getComputedStyle(document.documentElement);
+        const get = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+        return {
+            accent: get('--accent', '#5b47e0'),
+            ink: get('--ink', '#1b1836'),
+            inkFaint: get('--ink-faint', '#918cb4'),
+            border: get('--border', '#e7e4f4'),
+        };
+    };
 
-const baseOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: '#1e2a56',
-            padding: 10,
-            cornerRadius: 6,
-            displayColors: false,
-        },
-    },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: { color: INK_MUTED, font: { size: 11 } },
-            border: { color: GRID },
-        },
-        y: {
-            beginAtZero: true,
-            grid: { color: GRID },
-            ticks: { color: INK_MUTED, font: { size: 11 }, precision: 0 },
-            border: { display: false },
-        },
-    },
-};
+    const [tokens, setTokens] = useState(resolve);
+
+    useEffect(() => {
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const refresh = () => setTokens(resolve());
+
+        media.addEventListener('change', refresh);
+
+        // The in-app theme toggle stamps data-theme on <html>; watch for it.
+        const observer = new MutationObserver(refresh);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        return () => {
+            media.removeEventListener('change', refresh);
+            observer.disconnect();
+        };
+    }, []);
+
+    return tokens;
+}
 
 function StatTile({ label, value, hint }) {
     return (
@@ -48,7 +57,7 @@ function StatTile({ label, value, hint }) {
             <div className="card h-100">
                 <div className="card-body py-3">
                     <div className="small text-secondary">{label}</div>
-                    <div className="fs-3 fw-bold" style={{ color: '#1e2a56' }}>
+                    <div className="fs-3 fw-bold" style={{ color: 'var(--ink)' }}>
                         {value}
                     </div>
                     {hint && <div className="small text-secondary">{hint}</div>}
@@ -73,12 +82,50 @@ export default function Analytics({
     median_seconds,
     total_submissions,
 }) {
+    const t = useChartTokens();
+
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: t.ink,
+                padding: 10,
+                cornerRadius: 6,
+                displayColors: false,
+            },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { color: t.inkFaint, font: { size: 11 } },
+                border: { color: t.border },
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: t.border },
+                ticks: { color: t.inkFaint, font: { size: 11 }, precision: 0 },
+                border: { display: false },
+            },
+        },
+    };
+
+    const horizontalOptions = {
+        ...baseOptions,
+        indexAxis: 'y',
+        scales: {
+            x: { ...baseOptions.scales.y, grid: { color: t.border } },
+            y: { ...baseOptions.scales.x, grid: { display: false } },
+        },
+    };
+
     const funnelData = {
         labels: ['Viewed', 'Started', 'Submitted'],
         datasets: [
             {
                 data: [funnel.views, funnel.starts, funnel.submits],
-                backgroundColor: BRAND,
+                backgroundColor: t.accent,
                 borderRadius: 4,
                 maxBarThickness: 42,
             },
@@ -90,7 +137,7 @@ export default function Analytics({
         datasets: [
             {
                 data: timeline.map((point) => point.count),
-                backgroundColor: BRAND,
+                backgroundColor: t.accent,
                 borderRadius: 3,
                 maxBarThickness: 24,
             },
@@ -102,7 +149,7 @@ export default function Analytics({
         datasets: [
             {
                 data: steps.map((step) => step.sessions),
-                backgroundColor: BRAND,
+                backgroundColor: t.accent,
                 borderRadius: 4,
                 maxBarThickness: 32,
             },
@@ -114,6 +161,7 @@ export default function Analytics({
             header={
                 <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
+                        <span className="page-eyebrow d-block mb-1">Insights</span>
                         <h3 className="page-title mb-0">Analytics</h3>
                         <div className="text-secondary small">
                             {form.title} · last {windowDays} days
@@ -167,25 +215,11 @@ export default function Analytics({
                 <div className="col-lg-5">
                     <div className="card h-100">
                         <div className="card-body">
-                            <h6 className="mb-3">Funnel — views → starts → submissions</h6>
+                            <h6 className="mb-3" style={{ color: 'var(--ink)' }}>
+                                Funnel — views → starts → submissions
+                            </h6>
                             <div style={{ height: 220 }}>
-                                <Bar
-                                    data={funnelData}
-                                    options={{
-                                        ...baseOptions,
-                                        indexAxis: 'y',
-                                        scales: {
-                                            x: {
-                                                ...baseOptions.scales.y,
-                                                grid: { color: GRID },
-                                            },
-                                            y: {
-                                                ...baseOptions.scales.x,
-                                                grid: { display: false },
-                                            },
-                                        },
-                                    }}
-                                />
+                                <Bar data={funnelData} options={horizontalOptions} />
                             </div>
                         </div>
                     </div>
@@ -194,7 +228,9 @@ export default function Analytics({
                 <div className="col-lg-7">
                     <div className="card h-100">
                         <div className="card-body">
-                            <h6 className="mb-3">Submissions — last 14 days</h6>
+                            <h6 className="mb-3" style={{ color: 'var(--ink)' }}>
+                                Submissions — last 14 days
+                            </h6>
                             <div style={{ height: 220 }}>
                                 <Bar data={timelineData} options={baseOptions} />
                             </div>
@@ -206,29 +242,15 @@ export default function Analytics({
                     <div className="col-12">
                         <div className="card">
                             <div className="card-body">
-                                <h6 className="mb-1">Step drop-off</h6>
+                                <h6 className="mb-1" style={{ color: 'var(--ink)' }}>
+                                    Step drop-off
+                                </h6>
                                 <p className="small text-secondary mb-3">
                                     Unique sessions that reached each step of the
                                     multi-step form.
                                 </p>
                                 <div style={{ height: 200 }}>
-                                    <Bar
-                                        data={stepsData}
-                                        options={{
-                                            ...baseOptions,
-                                            indexAxis: 'y',
-                                            scales: {
-                                                x: {
-                                                    ...baseOptions.scales.y,
-                                                    grid: { color: GRID },
-                                                },
-                                                y: {
-                                                    ...baseOptions.scales.x,
-                                                    grid: { display: false },
-                                                },
-                                            },
-                                        }}
-                                    />
+                                    <Bar data={stepsData} options={horizontalOptions} />
                                 </div>
                             </div>
                         </div>

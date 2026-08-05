@@ -75,7 +75,17 @@ export default function Generate() {
         s.sections.reduce((n, section) => n + section.fields.length, 0);
 
     return (
-        <AuthenticatedLayout header={<h3 className="page-title">Generate with AI</h3>}>
+        <AuthenticatedLayout
+            header={
+                <div>
+                    <span className="page-eyebrow d-block mb-1">
+                        <i className="bi bi-stars me-1" style={{ color: 'var(--ai-accent)' }} />
+                        AI-assisted
+                    </span>
+                    <h3 className="page-title mb-0">Describe your form</h3>
+                </div>
+            }
+        >
             <Head title="Generate with AI" />
 
             <div className="card">

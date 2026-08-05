@@ -1,32 +1,40 @@
 // ---------------------------------------------------------------------------
-// Form Builder theme — Bootstrap 5
-// Design reference: assignment PDF §9 screenshots (light gray canvas, white
-// cards, blue primary actions, dark navy headings, red-outline cancel).
+// AI Form Builder theme — Bootstrap 5
+//
+// Palette: warm-indigo ink on a violet-tinted paper ground, one considered
+// accent (indigo-violet) for primary actions, one warm amber reserved
+// exclusively for AI-specific touches so "this is generative" reads at a
+// glance without relying on a gradient. Fraunces carries the one display
+// moment (the wordmark); Inter runs everything else — a dense, scannable
+// dashboard doesn't need a second characterful voice competing for
+// attention.
 // ---------------------------------------------------------------------------
 
 // 1. Bootstrap variable overrides (must come before the import)
-$font-family-sans-serif: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto,
+$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
+$font-family-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
 
-$primary: #2f80ed;
-$danger: #eb5757;
-$success: #27ae60;
-$warning: #f2c94c;
-$info: #56ccf2;
+$primary: #5b47e0; // indigo-violet — primary actions
+$ai-accent: #f0a202; // warm amber — reserved for AI-only touches
+$danger: #e0507a;
+$success: #1f9d7c;
+$warning: #f0a202;
+$info: #3f8ee8;
 
-$body-bg: #f4f6f9;
-$body-color: #343a40;
-$headings-color: #1e2a56;
+$body-bg: #f6f5fb;
+$body-color: #2a2750;
+$headings-color: #1b1836;
 $headings-font-weight: 700;
 
 $border-radius: 0.5rem;
 $border-radius-sm: 0.375rem;
 $border-radius-lg: 0.75rem;
-$card-border-color: #e9ecf1;
+$card-border-color: #e7e4f4;
 $card-cap-bg: #fff;
-$input-border-color: #d8dee8;
-$input-focus-border-color: tint-color($primary, 50%);
-$input-placeholder-color: #aab2bf;
+$input-border-color: #d9d4ef;
+$input-focus-border-color: tint-color($primary, 45%);
+$input-placeholder-color: #a39dc4;
 
 $nav-tabs-link-active-color: $primary;
 
@@ -34,33 +42,391 @@ $nav-tabs-link-active-color: $primary;
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // ---------------------------------------------------------------------------
-// 2. App chrome
+// 2. Theme tokens (light default; dark redefines the same names)
+// ---------------------------------------------------------------------------
+
+:root {
+    --ink: #1b1836;
+    --ink-soft: #5d5885;
+    --ink-faint: #918cb4;
+    --paper: #f6f5fb;
+    --surface: #ffffff;
+    --surface-sunken: #f0eefa;
+    --border: #e7e4f4;
+    --accent: #5b47e0;
+    --accent-soft: #ede9fc;
+    --ai-accent: #f0a202;
+    --ai-accent-soft: #fdf1d9;
+    --status-draft: #8a84ab;
+    --status-draft-bg: #eeecf7;
+    --status-published: #1f9d7c;
+    --status-published-bg: #e1f5ee;
+    --status-archived: #c07c1e;
+    --status-archived-bg: #faf0dc;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ink: #ece9fb;
+        --ink-soft: #b6b0dc;
+        --ink-faint: #766fa0;
+        --paper: #16132b;
+        --surface: #1e1a3a;
+        --surface-sunken: #191532;
+        --border: #322c58;
+        --accent: #8a78f5;
+        --accent-soft: #2a2452;
+        --ai-accent: #f6b93b;
+        --ai-accent-soft: #3a2d10;
+        --status-draft: #a49dcc;
+        --status-draft-bg: #2a2650;
+        --status-published: #4cc9a7;
+        --status-published-bg: #16332a;
+        --status-archived: #e0a94a;
+        --status-archived-bg: #3a2c12;
+    }
+}
+
+:root[data-theme='dark'] {
+    --ink: #ece9fb;
+    --ink-soft: #b6b0dc;
+    --ink-faint: #766fa0;
+    --paper: #16132b;
+    --surface: #1e1a3a;
+    --surface-sunken: #191532;
+    --border: #322c58;
+    --accent: #8a78f5;
+    --accent-soft: #2a2452;
+    --ai-accent: #f6b93b;
+    --ai-accent-soft: #3a2d10;
+    --status-draft: #a49dcc;
+    --status-draft-bg: #2a2650;
+    --status-published: #4cc9a7;
+    --status-published-bg: #16332a;
+    --status-archived: #e0a94a;
+    --status-archived-bg: #3a2c12;
+}
+
+:root[data-theme='light'] {
+    --ink: #1b1836;
+    --ink-soft: #5d5885;
+    --ink-faint: #918cb4;
+    --paper: #f6f5fb;
+    --surface: #ffffff;
+    --surface-sunken: #f0eefa;
+    --border: #e7e4f4;
+    --accent: #5b47e0;
+    --accent-soft: #ede9fc;
+    --ai-accent: #f0a202;
+    --ai-accent-soft: #fdf1d9;
+    --status-draft: #8a84ab;
+    --status-draft-bg: #eeecf7;
+    --status-published: #1f9d7c;
+    --status-published-bg: #e1f5ee;
+    --status-archived: #c07c1e;
+    --status-archived-bg: #faf0dc;
+}
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--ink);
+}
+
+// Bootstrap's own color variables ($body-color, $card-border-color, table
+// vars, etc.) are Sass variables baked into fixed hex at compile time — they
+// cannot respond to the runtime data-theme toggle. Everything below re-points
+// the actual rendered component rules at the custom-property tokens instead,
+// so dark mode repaints the whole app, not just the bits with .card.
+.card,
+.card-header,
+.card-footer,
+.list-group-item,
+.dropdown-menu,
+.modal-content {
+    background-color: var(--surface);
+    color: var(--ink);
+    border-color: var(--border);
+}
+
+// The QR/share box on the Finish step uses a plain bg-white utility rather
+// than a .card — bring it onto the same token.
+.bg-white {
+    background-color: var(--surface) !important;
+}
+
+.table {
+    --bs-table-bg: var(--surface);
+    --bs-table-color: var(--ink);
+    --bs-table-striped-bg: var(--surface-sunken);
+    --bs-table-striped-color: var(--ink);
+    --bs-table-hover-bg: var(--surface-sunken);
+    --bs-table-hover-color: var(--ink);
+    --bs-table-border-color: var(--border);
+    color: var(--ink);
+    vertical-align: middle;
+}
+
+.dropdown-item {
+    color: var(--ink-soft);
+
+    &:hover,
+    &:focus {
+        background-color: var(--surface-sunken);
+        color: var(--ink);
+    }
+}
+
+.form-control,
+.form-select {
+    background-color: var(--surface);
+    border-color: var(--border);
+    color: var(--ink);
+
+    &:focus {
+        background-color: var(--surface);
+        color: var(--ink);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 0.2rem var(--accent-soft);
+    }
+
+    &::placeholder {
+        color: var(--ink-faint);
+    }
+
+    &:disabled,
+    &[readonly] {
+        background-color: var(--surface-sunken);
+    }
+}
+
+.form-check-input {
+    background-color: var(--surface);
+    border-color: var(--border);
+
+    &:checked {
+        background-color: var(--accent);
+        border-color: var(--accent);
+    }
+}
+
+.form-label,
+.form-text,
+label {
+    color: var(--ink);
+}
+
+.nav-tabs {
+    border-color: var(--border);
+
+    .nav-link {
+        color: var(--ink-faint);
+        border-color: transparent;
+
+        &:hover {
+            border-color: var(--border);
+        }
+
+        &.active {
+            background-color: var(--surface);
+            border-color: var(--border) var(--border) var(--surface);
+            color: var(--accent);
+        }
+    }
+}
+
+.pagination {
+    .page-link {
+        background-color: var(--surface);
+        border-color: var(--border);
+        color: var(--ink-soft);
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }
+
+    .page-item.disabled .page-link {
+        background-color: var(--surface-sunken);
+        color: var(--ink-faint);
+    }
+}
+
+.alert-success {
+    background-color: var(--status-published-bg);
+    color: var(--status-published);
+    border-color: transparent;
+}
+
+.alert-danger {
+    background-color: #fde8ee;
+    color: #b23a5c;
+    border-color: transparent;
+}
+
+.alert-warning {
+    background-color: var(--status-archived-bg);
+    color: var(--status-archived);
+    border-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+    .alert-danger {
+        background-color: #3a1420;
+        color: #f0839f;
+    }
+}
+
+:root[data-theme='dark'] .alert-danger {
+    background-color: #3a1420;
+    color: #f0839f;
+}
+
+// ---------------------------------------------------------------------------
+// 3. App chrome
 // ---------------------------------------------------------------------------
 
 .app-topbar {
-    background: #fff;
-    border-bottom: 1px solid $card-border-color;
-    min-height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    min-height: 60px;
 }
 
+// Brand mark: a small generative-spark glyph + a serif wordmark. No stock
+// icon — the glyph is drawn so it reads as "form + AI" rather than a
+// generic checklist.
 .app-brand {
-    font-weight: 800;
-    color: $headings-color;
-    font-size: 1.35rem;
-    letter-spacing: -0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.app-brand-mark {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    border-radius: 9px;
+    background: linear-gradient(155deg, var(--accent) 0%, #7a68ea 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(91, 71, 224, 0.35);
+
+    svg {
+        width: 17px;
+        height: 17px;
+    }
+}
+
+.app-brand-word {
+    font-family: $font-family-serif;
+    font-weight: 600;
+    font-size: 1.28rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    line-height: 1;
+
+    em {
+        font-style: italic;
+        color: var(--accent);
+    }
+}
+
+.app-brand-sub {
+    display: block;
+    font-family: $font-family-sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ai-accent);
+    margin-top: -2px;
 }
 
 .page-title {
-    font-weight: 800;
-    letter-spacing: -0.02em;
+    font-family: $font-family-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+.page-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
 }
 
 .card {
-    box-shadow: 0 1px 2px rgba(30, 42, 86, 0.04);
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: 0 1px 2px rgba(27, 24, 54, 0.04);
+}
+
+.text-secondary {
+    color: var(--ink-soft) !important;
+}
+
+// Buttons: repaint Bootstrap's variable-driven variants onto the tokens so
+// dark mode "just works" without duplicating every .btn-* rule.
+.btn-primary {
+    --bs-btn-bg: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-bg: #4c3ac7;
+    --bs-btn-hover-border-color: #4c3ac7;
+    --bs-btn-active-bg: #4c3ac7;
+    --bs-btn-active-border-color: #4c3ac7;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--accent);
+    --bs-btn-border-color: var(--accent);
+    --bs-btn-hover-bg: var(--accent);
+    --bs-btn-hover-border-color: var(--accent);
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--ink-soft);
+    --bs-btn-border-color: var(--border);
+    --bs-btn-hover-bg: var(--surface-sunken);
+    --bs-btn-hover-color: var(--ink);
+    --bs-btn-hover-border-color: var(--border);
+}
+
+// "Generate with AI" gets its own warm-amber outline treatment wherever it
+// appears, so AI entry points are visually one family across the app.
+.btn-ai {
+    --bs-btn-color: #9a6400;
+    --bs-btn-border-color: var(--ai-accent);
+    --bs-btn-hover-bg: var(--ai-accent);
+    --bs-btn-hover-border-color: var(--ai-accent);
+    --bs-btn-hover-color: #2a1c00;
+    background: var(--ai-accent-soft);
+    font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+    .btn-ai {
+        --bs-btn-color: #f6b93b;
+        --bs-btn-hover-color: #1b1633;
+    }
+}
+
+:root[data-theme='dark'] .btn-ai {
+    --bs-btn-color: #f6b93b;
+    --bs-btn-hover-color: #1b1633;
 }
 
 // ---------------------------------------------------------------------------
-// 3. Stepper (Details ─ Builder ─ Settings ─ Finish)
+// 4. Stepper (Details ─ Builder ─ Settings ─ Finish)
 // ---------------------------------------------------------------------------
 
 .stepper {
@@ -83,36 +449,36 @@ $nav-tabs-link-active-color: $primary;
             justify-content: center;
             font-size: 0.8rem;
             font-weight: 700;
-            border: 2px solid #cfd6e0;
-            color: #8a93a3;
-            background: #fff;
+            border: 2px solid var(--border);
+            color: var(--ink-faint);
+            background: var(--surface);
             flex: 0 0 auto;
         }
 
         .step-label {
             font-weight: 600;
-            color: #8a93a3;
+            color: var(--ink-faint);
             font-size: 0.9rem;
         }
 
         &.active .step-circle {
-            border-color: $primary;
-            background: $primary;
+            border-color: var(--accent);
+            background: var(--accent);
             color: #fff;
         }
 
         &.active .step-label {
-            color: $headings-color;
+            color: var(--ink);
         }
 
         &.done .step-circle {
-            border-color: $primary;
-            background: #fff;
-            color: $primary;
+            border-color: var(--accent);
+            background: var(--surface);
+            color: var(--accent);
         }
 
         &.done .step-label {
-            color: #6c7686;
+            color: var(--ink-soft);
         }
 
         &.clickable {
@@ -123,48 +489,49 @@ $nav-tabs-link-active-color: $primary;
     .step-line {
         flex: 1 1 auto;
         height: 2px;
-        background: #e1e6ee;
+        background: var(--border);
         min-width: 2rem;
     }
 }
 
 // ---------------------------------------------------------------------------
-// 4. Builder canvas + palette
+// 5. Builder canvas + palette
 // ---------------------------------------------------------------------------
 
 .builder-canvas {
-    background-image: radial-gradient(#d9dfe9 1px, transparent 1px);
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
     background-size: 14px 14px;
-    border: 2px dashed #c6cedb;
+    background-color: var(--paper);
+    border: 2px dashed var(--border);
     border-radius: $border-radius-lg;
     min-height: 420px;
     padding: 1rem;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 
     &.drag-over {
-        border-color: $primary;
-        background-color: tint-color($primary, 92%);
+        border-color: var(--accent);
+        background-color: var(--accent-soft);
     }
 }
 
 .canvas-empty {
-    color: #98a1b1;
+    color: var(--ink-faint);
     text-align: center;
     padding: 6rem 1rem;
     user-select: none;
 }
 
 .field-card {
-    background: #fff;
-    border: 1px solid #dde3ec;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: $border-radius;
     padding: 0.75rem 1rem;
     margin-bottom: 0.75rem;
     position: relative;
 
     &.selected {
-        border-color: $primary;
-        box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.15);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
     }
 
     &.dragging {
@@ -181,19 +548,19 @@ $nav-tabs-link-active-color: $primary;
         right: 0.5rem;
         display: flex;
         gap: 0.1rem;
-        background: #fff;
+        background: var(--surface);
         border-radius: $border-radius-sm;
 
         .btn {
             --bs-btn-padding-y: 0.1rem;
             --bs-btn-padding-x: 0.35rem;
             --bs-btn-font-size: 0.85rem;
-            color: #8a93a3;
+            color: var(--ink-faint);
             border: 0;
 
             &:hover {
-                color: $primary;
-                background: tint-color($primary, 90%);
+                color: var(--accent);
+                background: var(--accent-soft);
             }
 
             &.text-danger-hover:hover {
@@ -209,7 +576,7 @@ $nav-tabs-link-active-color: $primary;
 
     .field-label {
         font-weight: 600;
-        color: $headings-color;
+        color: var(--ink);
         font-size: 0.9rem;
     }
 
@@ -217,15 +584,15 @@ $nav-tabs-link-active-color: $primary;
     .field-preview textarea,
     .field-preview select {
         pointer-events: none;
-        background: #fafbfd;
+        background: var(--surface-sunken);
     }
 }
 
 .section-card {
-    border: 1px solid #dde3ec;
-    border-left: 4px solid $primary;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
     border-radius: $border-radius;
-    background: #fff;
+    background: var(--surface);
     margin-bottom: 1rem;
 }
 
@@ -234,7 +601,7 @@ $nav-tabs-link-active-color: $primary;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #8a93a3;
+    color: var(--ink-faint);
     text-transform: uppercase;
 }
 
@@ -245,13 +612,13 @@ $nav-tabs-link-active-color: $primary;
 }
 
 .palette-tile {
-    border: 1px solid #dde3ec;
+    border: 1px solid var(--border);
     border-radius: $border-radius-sm;
-    background: #fff;
+    background: var(--surface);
     padding: 0.6rem 0.25rem;
     text-align: center;
     font-size: 0.72rem;
-    color: #5b6472;
+    color: var(--ink-soft);
     cursor: pointer;
     user-select: none;
     transition: border-color 0.1s ease, box-shadow 0.1s ease;
@@ -260,37 +627,37 @@ $nav-tabs-link-active-color: $primary;
         display: block;
         font-size: 1rem;
         margin-bottom: 0.25rem;
-        color: #8a93a3;
+        color: var(--ink-faint);
     }
 
     &:hover {
-        border-color: $primary;
-        color: $primary;
+        border-color: var(--accent);
+        color: var(--accent);
 
         i {
-            color: $primary;
+            color: var(--accent);
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// 5. Raw JSON editor
+// 6. Raw JSON editor
 // ---------------------------------------------------------------------------
 
 .json-editor {
     font-family: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
     font-size: 0.8rem;
     min-height: 380px;
-    background: #0f172a;
-    color: #e2e8f0;
+    background: #17152c;
+    color: #e3e0f7;
     border-radius: $border-radius;
-    border: 1px solid #1e293b;
+    border: 1px solid #2c2750;
 
     &:focus {
-        background: #0f172a;
-        color: #e2e8f0;
-        border-color: $primary;
-        box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.25);
+        background: #17152c;
+        color: #e3e0f7;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
     }
 
     &.is-invalid {
@@ -299,7 +666,7 @@ $nav-tabs-link-active-color: $primary;
 }
 
 // ---------------------------------------------------------------------------
-// 6. Public fill page
+// 7. Public fill page
 // ---------------------------------------------------------------------------
 
 .fill-shell {
@@ -307,17 +674,17 @@ $nav-tabs-link-active-color: $primary;
 }
 
 .fill-header {
-    border-top: 4px solid $primary;
+    border-top: 4px solid var(--accent);
 }
 
 .rating-star {
     font-size: 1.6rem;
-    color: #cfd6e0;
+    color: var(--border);
     cursor: pointer;
     transition: color 0.1s ease;
 
     &.active {
-        color: $warning;
+        color: var(--ai-accent);
     }
 }
 
@@ -331,17 +698,70 @@ $nav-tabs-link-active-color: $primary;
 }
 
 // ---------------------------------------------------------------------------
-// 7. Misc
+// 8. Forms list — status pills, accent rail
+// ---------------------------------------------------------------------------
+
+.forms-table {
+    tr {
+        position: relative;
+    }
+
+    td {
+        border-color: var(--border);
+    }
+
+    tr:hover td {
+        background: var(--surface-sunken);
+    }
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+
+    &::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    &.status-draft {
+        background: var(--status-draft-bg);
+        color: var(--status-draft);
+    }
+
+    &.status-published {
+        background: var(--status-published-bg);
+        color: var(--status-published);
+    }
+
+    &.status-archived {
+        background: var(--status-archived-bg);
+        color: var(--status-archived);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 9. Misc
 // ---------------------------------------------------------------------------
 
 .char-counter {
     font-size: 0.75rem;
-    color: #98a1b1;
+    color: var(--ink-faint);
 }
 
 .public-url-hint {
     font-size: 0.8rem;
-    color: #8a93a3;
+    color: var(--ink-faint);
     word-break: break-all;
 }
 

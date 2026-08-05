@@ -6,10 +6,8 @@ function TopNavLink({ href, active, children }) {
     return (
         <Link
             href={href}
-            className={
-                'nav-link px-3 fw-semibold ' +
-                (active ? 'text-primary' : 'text-secondary')
-            }
+            className="nav-link px-3 fw-semibold"
+            style={{ color: active ? 'var(--accent)' : 'var(--ink-soft)' }}
         >
             {children}
         </Link>
@@ -36,7 +34,6 @@ export default function AuthenticatedLayout({ header, children }) {
                     >
                         <i className="bi bi-list fs-4" />
                     </button>
-                    <i className="bi bi-list fs-4 text-secondary d-none d-md-inline" />
                     <Link href={route('forms.index')} className="text-decoration-none">
                         <ApplicationLogo />
                     </Link>
@@ -89,7 +86,7 @@ export default function AuthenticatedLayout({ header, children }) {
             </nav>
 
             {menuOpen && (
-                <div className="bg-white border-bottom d-md-none px-3 py-2">
+                <div className="app-topbar border-bottom d-md-none px-3 py-2">
                     {links.map((l) => (
                         <TopNavLink key={l.label} href={l.href} active={l.active}>
                             {l.label}

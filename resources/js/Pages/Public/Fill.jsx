@@ -298,7 +298,7 @@ function Shell({ title, children }) {
             <Head title={title} />
             <div className="fill-shell mx-auto">{children}</div>
             <div className="text-center text-secondary small mt-4">
-                Powered by Form Builder
+                Powered by AI Form Builder
             </div>
         </div>
     );

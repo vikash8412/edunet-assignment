@@ -93,7 +93,14 @@ export default function Wizard({ mode, form, initialStep }) {
 
     return (
         <AuthenticatedLayout
-            header={<h3 className="page-title">Form Builder</h3>}
+            header={
+                <div>
+                    <span className="page-eyebrow d-block mb-1">
+                        {mode === 'edit' ? 'Editing' : 'New form'}
+                    </span>
+                    <h3 className="page-title mb-0">{schema.title || 'Untitled form'}</h3>
+                </div>
+            }
         >
             <Head title={form ? `Edit — ${form.title}` : 'New form'} />
 
