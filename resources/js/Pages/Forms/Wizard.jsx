@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Stepper from '@/Components/Builder/Stepper';
 import GeneratePanel from '@/Components/Ai/GeneratePanel';
@@ -33,6 +33,15 @@ export default function Wizard({ mode, form, initialStep }) {
         () => (errors?.schema ? String(errors.schema).split('\n').filter(Boolean) : []),
         [errors],
     );
+
+    // Inertia re-renders this component in place after store/update redirects
+    // (create -> edit is the same page component), so sync the step from props.
+    useEffect(() => {
+        if (STEP_ORDER.includes(initialStep) && form) {
+            setStep(initialStep);
+            setMaxReached('finish');
+        }
+    }, [initialStep, form?.id]);
 
     const goTo = (target) => {
         setStep(target);

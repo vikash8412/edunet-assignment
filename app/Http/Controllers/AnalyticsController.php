@@ -68,7 +68,7 @@ class AnalyticsController extends Controller
             ->whereNotNull('started_at')
             ->where('created_at', '>=', $since)
             ->get(['started_at', 'created_at'])
-            ->map(fn ($submission) => max(0, $submission->created_at->diffInSeconds($submission->started_at)))
+            ->map(fn ($submission) => (int) abs($submission->created_at->diffInSeconds($submission->started_at)))
             ->sort()
             ->values();
 

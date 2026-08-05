@@ -1,6 +1,7 @@
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import FieldCard from './FieldCard';
+import { makeId } from '@/lib/fieldTypes';
 
 function SectionBlock({
     section,
@@ -107,13 +108,15 @@ function SectionBlock({
                             onMove={(delta) =>
                                 dispatch({ type: 'moveField', fieldId: field.id, delta })
                             }
-                            onDuplicate={() =>
+                            onDuplicate={() => {
+                                const copyId = makeId('fld');
                                 dispatch({
                                     type: 'duplicateField',
                                     fieldId: field.id,
-                                    onAdded: (f) => onSelectField(f.id),
-                                })
-                            }
+                                    copyId,
+                                });
+                                onSelectField(copyId);
+                            }}
                             onRemove={() =>
                                 dispatch({ type: 'removeField', fieldId: field.id })
                             }

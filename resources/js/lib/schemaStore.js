@@ -2,7 +2,7 @@
 // truth: the canvas, the field-options panel and the raw JSON editor all
 // dispatch here and re-render from the same state.
 
-import { allKeys, newField, newSection } from './fieldTypes';
+import { newSection } from './fieldTypes';
 
 export function schemaReducer(schema, action) {
     switch (action.type) {
@@ -44,16 +44,14 @@ export function schemaReducer(schema, action) {
             return { ...schema, sections };
         }
 
-        case 'addField': {
-            const field = newField(action.fieldType, allKeys(schema));
-            action.onAdded?.(field);
+        case 'addField':
+            // action.field is pre-built by the caller (keeps the reducer pure).
             return mapSections(schema, (s) => {
                 if (s.id !== action.sectionId) return s;
                 const fields = [...s.fields];
-                fields.splice(action.index ?? fields.length, 0, field);
+                fields.splice(action.index ?? fields.length, 0, action.field);
                 return { ...s, fields };
             });
-        }
 
         case 'updateField':
             return mapSections(schema, (s) => ({
@@ -70,18 +68,18 @@ export function schemaReducer(schema, action) {
             }));
 
         case 'duplicateField': {
-            const keys = allKeys(schema);
+            // action.copyId is minted by the caller so it can select the copy.
+            const keys = schema.sections.flatMap((s) => s.fields.map((f) => f.key));
             return mapSections(schema, (s) => {
                 const index = s.fields.findIndex((f) => f.id === action.fieldId);
                 if (index < 0) return s;
                 const original = s.fields[index];
                 const copy = {
                     ...structuredClone(original),
-                    id: newField(original.type, []).id,
+                    id: action.copyId,
                     key: uniqueCopyKey(original.key, keys),
                     label: original.label + ' (copy)',
                 };
-                action.onAdded?.(copy);
                 const fields = [...s.fields];
                 fields.splice(index + 1, 0, copy);
                 return { ...s, fields };

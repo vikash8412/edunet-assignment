@@ -10,7 +10,7 @@ import Canvas from '@/Components/Builder/Canvas';
 import PaletteTab from '@/Components/Builder/PaletteTab';
 import FieldOptionsTab from '@/Components/Builder/FieldOptionsTab';
 import JsonEditorPanel from '@/Components/Builder/JsonEditorPanel';
-import { findField } from '@/lib/fieldTypes';
+import { allKeys, findField, newField } from '@/lib/fieldTypes';
 
 export default function BuilderStep({
     schema,
@@ -40,14 +40,15 @@ export default function BuilderStep({
         setTab('options');
     };
 
+    const insertField = (fieldType, sectionId, index) => {
+        const field = newField(fieldType, allKeys(schema));
+        dispatch({ type: 'addField', sectionId, index, field });
+        editField(field.id);
+    };
+
     const appendField = (fieldType) => {
         const lastSection = schema.sections[schema.sections.length - 1];
-        dispatch({
-            type: 'addField',
-            sectionId: lastSection.id,
-            fieldType,
-            onAdded: (f) => editField(f.id),
-        });
+        insertField(fieldType, lastSection.id, undefined);
     };
 
     const resolveTarget = (overId) => {
@@ -69,13 +70,7 @@ export default function BuilderStep({
         if (!target) return;
 
         if (active.data.current?.fromPalette) {
-            dispatch({
-                type: 'addField',
-                sectionId: target.sectionId,
-                index: target.index,
-                fieldType: active.data.current.fieldType,
-                onAdded: (f) => editField(f.id),
-            });
+            insertField(active.data.current.fieldType, target.sectionId, target.index);
             return;
         }
 
