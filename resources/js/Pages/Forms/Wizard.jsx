@@ -9,24 +9,42 @@ import FinishStep from './Steps/FinishStep';
 import { Head, router, usePage } from '@inertiajs/react';
 import { emptySchema } from '@/lib/fieldTypes';
 import { schemaReducer } from '@/lib/schemaStore';
+import { HANDOFF_KEY } from '@/Pages/Ai/Generate';
 
 const STEP_ORDER = ['details', 'builder', 'settings', 'finish'];
 
+/** Picks up (and clears) a schema handed off from the standalone AI-generate page. */
+function readAiHandoff() {
+    try {
+        const raw = sessionStorage.getItem(HANDOFF_KEY);
+        if (!raw) return null;
+        sessionStorage.removeItem(HANDOFF_KEY);
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
 export default function Wizard({ mode, form, initialStep }) {
     const { errors } = usePage().props;
+    const isAiHandoff = mode === 'create' && new URLSearchParams(window.location.search).get('from') === 'ai';
 
     const [schema, dispatch] = useReducer(
         schemaReducer,
         undefined,
-        () => form?.schema ?? emptySchema(),
+        () => (isAiHandoff && readAiHandoff()) || form?.schema || emptySchema(),
     );
     const [status, setStatus] = useState(form?.status ?? 'draft');
-    const [step, setStep] = useState(
-        STEP_ORDER.includes(initialStep) && (form || initialStep === 'details')
+    const [step, setStep] = useState(() => {
+        if (isAiHandoff) return 'builder';
+        return STEP_ORDER.includes(initialStep) && (form || initialStep === 'details')
             ? initialStep
-            : 'details',
-    );
-    const [maxReached, setMaxReached] = useState(mode === 'edit' ? 'finish' : step);
+            : 'details';
+    });
+    const [maxReached, setMaxReached] = useState(() => {
+        if (mode === 'edit') return 'finish';
+        return isAiHandoff ? 'builder' : step;
+    });
     const [saving, setSaving] = useState(false);
 
     const serverErrors = useMemo(
@@ -97,13 +115,18 @@ export default function Wizard({ mode, form, initialStep }) {
                     dispatch={dispatch}
                     serverErrors={serverErrors}
                     aiPanel={
-                        <GeneratePanel
-                            schema={schema}
-                            formId={form?.id ?? null}
-                            onApply={(generated) =>
-                                dispatch({ type: 'replace', schema: generated })
-                            }
-                        />
+                        // AI-assisted editing lives here only for a form that
+                        // already exists — creating from a prompt happens on
+                        // its own page (Forms index → "Generate with AI").
+                        mode === 'edit' ? (
+                            <GeneratePanel
+                                schema={schema}
+                                formId={form.id}
+                                onApply={(generated) =>
+                                    dispatch({ type: 'replace', schema: generated })
+                                }
+                            />
+                        ) : null
                     }
                     onBack={() => goTo('details')}
                     onNext={() => goTo('settings')}

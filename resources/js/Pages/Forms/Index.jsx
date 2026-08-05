@@ -29,6 +29,10 @@ export default function Index({ forms }) {
                             <i className="bi bi-file-earmark-arrow-up me-1" />
                             Import Word/Excel
                         </Link>
+                        <Link href={route('ai.generate')} className="btn btn-outline-primary">
+                            <i className="bi bi-stars me-1" />
+                            Generate with AI
+                        </Link>
                         <Link href={route('forms.create')} className="btn btn-primary">
                             <i className="bi bi-plus-lg me-1" />
                             New form
@@ -48,9 +52,15 @@ export default function Index({ forms }) {
                     <div className="card-body text-center text-secondary py-5">
                         <i className="bi bi-ui-checks fs-1 d-block mb-3" />
                         <p className="mb-3">You don't have any forms yet.</p>
-                        <Link href={route('forms.create')} className="btn btn-primary">
-                            Create your first form
-                        </Link>
+                        <div className="d-flex gap-2 justify-content-center">
+                            <Link href={route('ai.generate')} className="btn btn-outline-primary">
+                                <i className="bi bi-stars me-1" />
+                                Generate with AI
+                            </Link>
+                            <Link href={route('forms.create')} className="btn btn-primary">
+                                Create your first form
+                            </Link>
+                        </div>
                     </div>
                 ) : (
                     <div className="table-responsive">

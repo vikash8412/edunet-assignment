@@ -44,8 +44,42 @@ export default function Fill({ publicId, schema, preview, fillToken, success }) 
 
     const submit = (e) => {
         e.preventDefault();
-        post(`/f/${publicId}`, { forceFormData: true, preserveScroll: true });
+        post(`/f/${publicId}`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onError: (serverErrors) => {
+                if (!multiStep) return;
+
+                // Jump to the first step that actually contains an errored
+                // field — otherwise the error renders on whichever step the
+                // respondent happened to submit from, even if the invalid
+                // field lives on an earlier, unmounted step.
+                const erroredKeys = Object.keys(serverErrors);
+                const stepIndex = schema.sections.findIndex((section) =>
+                    section.fields.some((field) => erroredKeys.includes(field.key)),
+                );
+
+                if (stepIndex !== -1 && stepIndex !== step) {
+                    setStep(stepIndex);
+                    window.scrollTo({ top: 0 });
+                }
+            },
+        });
     };
+
+    // Which steps have at least one field currently reported as invalid —
+    // drives the small warning dot on the step indicator below.
+    const stepsWithErrors = useMemo(() => {
+        if (!multiStep) return new Set();
+        const erroredKeys = Object.keys(errors).filter((key) => key !== '_form');
+        return new Set(
+            schema.sections
+                .map((section, i) =>
+                    section.fields.some((field) => erroredKeys.includes(field.key)) ? i : null,
+                )
+                .filter((i) => i !== null),
+        );
+    }, [errors, multiStep, schema]);
 
     if (success) {
         return (
@@ -101,6 +135,12 @@ export default function Fill({ publicId, schema, preview, fillToken, success }) 
                             {schema.sections[step].title
                                 ? ` — ${schema.sections[step].title}`
                                 : ''}
+                            {stepsWithErrors.has(step) && (
+                                <span className="text-danger ms-2">
+                                    <i className="bi bi-exclamation-circle-fill me-1" />
+                                    fix the errors below
+                                </span>
+                            )}
                         </span>
                         <span>
                             {Math.round(((step + 1) / schema.sections.length) * 100)}%
@@ -114,6 +154,25 @@ export default function Fill({ publicId, schema, preview, fillToken, success }) 
                             }}
                         />
                     </div>
+                    {stepsWithErrors.size > 0 && (
+                        <div className="d-flex gap-1 mt-1">
+                            {schema.sections.map((_, i) => (
+                                <span
+                                    key={i}
+                                    className={
+                                        'rounded-circle ' +
+                                        (stepsWithErrors.has(i) ? 'bg-danger' : 'bg-secondary-subtle')
+                                    }
+                                    style={{ width: 6, height: 6 }}
+                                    title={
+                                        stepsWithErrors.has(i)
+                                            ? `Step ${i + 1} has errors`
+                                            : undefined
+                                    }
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -39,6 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/submission-files/{file}', [SubmissionController::class, 'file'])
         ->name('submissions.file');
 
+    Route::get('/ai/generate', fn () => Inertia::render('Ai/Generate'))
+        ->name('ai.generate');
     Route::post('/ai/generations', [AiGenerationController::class, 'store'])
         ->middleware('throttle:ai')->name('ai.generations.store');
     Route::get('/ai/generations/{generation}', [AiGenerationController::class, 'show'])

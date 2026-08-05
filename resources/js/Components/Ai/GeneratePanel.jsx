@@ -1,24 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { allInputFields } from '@/lib/fieldTypes';
 
 const POLL_MS = 2000;
 
 /**
- * The Part B panel on the Builder step: prompt in, queued job, polling,
- * preview, apply-to-canvas. Works for creating from scratch and for
- * editing the current form ("add an emergency contact section").
+ * AI-assisted editing of an already-saved form (Builder step, edit mode
+ * only): "add an emergency contact section", "make phone required",
+ * "translate labels to Hindi". Creating a NEW form from a prompt is a
+ * separate standalone flow — see Pages/Ai/Generate.jsx, reached from the
+ * Forms list's "Generate with AI" button.
  */
-export default function GeneratePanel({ schema, formId, onApply }) {
+export default function GeneratePanel({ formId, onApply }) {
     const [open, setOpen] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [generation, setGeneration] = useState(null); // {id,status,...}
     const [error, setError] = useState(null);
     const pollRef = useRef(null);
 
-    const canvasHasFields = allInputFields(schema).length > 0;
-    // Editing an existing form needs a saved form id; otherwise we always create.
-    const mode = formId && canvasHasFields ? 'edit' : 'create';
     const busy =
         generation && ['queued', 'running'].includes(generation.status);
 
@@ -31,8 +29,8 @@ export default function GeneratePanel({ schema, formId, onApply }) {
         try {
             const { data } = await axios.post(route('ai.generations.store'), {
                 prompt,
-                mode,
-                form_id: mode === 'edit' ? formId : null,
+                mode: 'edit',
+                form_id: formId,
             });
 
             setGeneration({ id: data.id, status: 'queued' });
@@ -78,7 +76,7 @@ export default function GeneratePanel({ schema, formId, onApply }) {
             >
                 <strong className="small">
                     <i className="bi bi-stars text-primary me-1" />
-                    Generate with AI
+                    Edit with AI
                 </strong>
                 <i className={'bi small ' + (open ? 'bi-chevron-up' : 'bi-chevron-down')} />
             </div>
@@ -88,11 +86,7 @@ export default function GeneratePanel({ schema, formId, onApply }) {
                     <textarea
                         className="form-control mb-2"
                         rows={2}
-                        placeholder={
-                            mode === 'edit'
-                                ? 'Describe a change — e.g. "add an emergency contact section", "make phone required", "translate labels to Hindi"'
-                                : 'Describe your form — e.g. "internship application with education history, skills and resume upload"'
-                        }
+                        placeholder='Describe a change — e.g. "add an emergency contact section", "make phone required", "translate labels to Hindi"'
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         disabled={busy}
@@ -115,14 +109,12 @@ export default function GeneratePanel({ schema, formId, onApply }) {
                             ) : (
                                 <>
                                     <i className="bi bi-stars me-1" />
-                                    {mode === 'edit' ? 'Update this form' : 'Generate form'}
+                                    Update this form
                                 </>
                             )}
                         </button>
                         <span className="small text-secondary">
-                            {mode === 'edit'
-                                ? 'The AI edits the current form.'
-                                : 'The AI creates a new form on the canvas.'}
+                            The AI edits the current form.
                         </span>
                     </div>
 

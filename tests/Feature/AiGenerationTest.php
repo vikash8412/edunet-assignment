@@ -81,7 +81,7 @@ it('turns a clean JSON reply into a validated schema with stats', function () {
         ->and($generation->prompt_tokens)->toBe(100)
         ->and($generation->completion_tokens)->toBe(200)
         ->and($generation->latency_ms)->toBeGreaterThanOrEqual(0)
-        ->and($generation->model)->toBe('gemini-2.0-flash');
+        ->and($generation->model)->toBe(config('services.gemini.model'));
 });
 
 it('repairs fenced and prose-wrapped JSON', function () {
