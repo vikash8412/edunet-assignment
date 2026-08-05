@@ -1,0 +1,66 @@
+# Local development convenience only — the live demo runs on shared
+# hosting (see README "Deployment"), not this Compose file. This gives
+# every reviewer a real MySQL 8 (matching the brief) without installing
+# anything locally.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: mysql
+      DB_DATABASE: formbuilder
+      DB_USERNAME: formbuilder
+      DB_PASSWORD: secret
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c "php artisan migrate --force &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: mysql
+      DB_DATABASE: formbuilder
+      DB_USERNAME: formbuilder
+      DB_PASSWORD: secret
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # Mirrors the shared-hosting cron: a self-stopping worker, restarted
+    # in a loop rather than left running under a process supervisor.
+    command: >
+      sh -c "while true; do
+               php artisan queue:work database --stop-when-empty --max-time=50;
+               sleep 2;
+             done"
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: formbuilder
+      MYSQL_USER: formbuilder
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql-data:
