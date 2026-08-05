@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicFormController;
+use App\Http\Controllers\SubmissionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -18,12 +20,23 @@ Route::middleware('auth')->group(function () {
     Route::resource('forms', FormController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
+    Route::get('/forms/{form}/submissions', [SubmissionController::class, 'index'])
+        ->name('forms.submissions.index');
+    Route::get('/forms/{form}/submissions/export', [SubmissionController::class, 'export'])
+        ->name('forms.submissions.export');
+    Route::get('/submission-files/{file}', [SubmissionController::class, 'file'])
+        ->name('submissions.file');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Public fill URL — implementation lands with the public form controller.
-Route::get('/f/{publicId}', fn (string $publicId) => abort(404))->name('fill.show');
+// Public fill URLs — throttled, no auth.
+Route::get('/f/{publicId}', [PublicFormController::class, 'show'])->name('fill.show');
+Route::post('/f/{publicId}', [PublicFormController::class, 'store'])
+    ->middleware('throttle:fill')->name('fill.store');
+Route::post('/f/{publicId}/event', [PublicFormController::class, 'event'])
+    ->middleware('throttle:fill-events')->name('fill.event');
 
 require __DIR__.'/auth.php';

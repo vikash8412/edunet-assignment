@@ -66,4 +66,14 @@ class FormFactory extends Factory
     {
         return $this->state(['status' => 'draft']);
     }
+
+    public function configure(): static
+    {
+        // Mirror the real save flow: every form starts at version 1.
+        return $this->afterCreating(function ($form) {
+            if ($form->versions()->count() === 0) {
+                $form->saveSchemaVersion($form->schema, $form->user_id);
+            }
+        });
+    }
 }
