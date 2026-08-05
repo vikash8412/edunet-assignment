@@ -297,6 +297,7 @@ client-side polling.
 | `GET` | `/forms/{form}/submissions` | Paginated + searchable submissions |
 | `GET` | `/forms/{form}/submissions/export` | Streamed CSV export |
 | `GET` | `/submission-files/{file}` | Authorized file download |
+| `GET` | `/ai/generate` | Standalone "describe your form" page (create-from-prompt entry point) |
 | `POST` | `/ai/generations` | Queue an AI create/edit job → `{id}` |
 | `GET` | `/ai/generations/{id}` | Poll status/result/stats (JSON) |
 | `GET` | `/import` | Import upload screen |
